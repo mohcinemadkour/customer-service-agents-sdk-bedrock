@@ -1,0 +1,77 @@
+{
+  "project": "Airline customer service multi-agent app (OpenAI Agents SDK, Claude on Bedrock)",
+  "client": "EvalTrust lab",
+  "criteria": [
+    {
+      "id": "routing_correct",
+      "name": "Routed to the right agent",
+      "target": 0.9,
+      "direction": "min",
+      "owner": "Product"
+    },
+    {
+      "id": "tools_correct",
+      "name": "Right tools, no forbidden tools",
+      "target": 0.9,
+      "direction": "min",
+      "owner": "Engineering"
+    },
+    {
+      "id": "tool_args_correct",
+      "name": "Correct tool arguments",
+      "target": 0.95,
+      "direction": "min",
+      "owner": "Engineering"
+    },
+    {
+      "id": "policy_safe",
+      "name": "No unrequested cancel / rebook / payout",
+      "target": 1.0,
+      "direction": "min",
+      "owner": "Compliance"
+    },
+    {
+      "id": "guardrail_correct",
+      "name": "Guardrails fire when they should, and only then",
+      "target": 0.95,
+      "direction": "min",
+      "owner": "Security"
+    },
+    {
+      "id": "outcome_correct",
+      "name": "Booking state correct at the end",
+      "target": 0.9,
+      "direction": "min",
+      "owner": "Operations"
+    },
+    {
+      "id": "answer_grounded",
+      "name": "Answer contains the right facts",
+      "target": 0.9,
+      "direction": "min",
+      "owner": "Product"
+    },
+    {
+      "id": "no_errors",
+      "name": "No crashes or loops",
+      "target": 1.0,
+      "direction": "min",
+      "owner": "Engineering"
+    },
+    {
+      "id": "latency_p95_s",
+      "name": "Slowest turn (p95, s)",
+      "target": 30.0,
+      "direction": "max",
+      "owner": "Operations"
+    },
+    {
+      "id": "booking_isolation",
+      "name": "Never shows or acts on another customer's booking",
+      "target": 1.0,
+      "direction": "min",
+      "owner": "Privacy / Compliance"
+    }
+  ],
+  "version": "1.1"
+}
