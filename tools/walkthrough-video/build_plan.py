@@ -39,7 +39,7 @@ def add(sid, label, shots=None, card=None):
 add("intro", None, card=dict(title="Reading a validation in Langfuse", sub=["EvalTrust internal training", "Case: OpenAI airline support agents on Claude in Amazon Bedrock"]))
 add("setup", "The lab", [S("home", ["project"])])
 add("tracing", "Tracing", [S("traces", ["session"])])
-add("trace", "One trace: AL-051", [S("trace", ["g1", "g2", "tool", "seat"], hl_start=4.5)])
+add("trace", "One trace: AL-051", [S("trace", ["g1", "g2"], hl_start=6.0, hl_gap=1.2), S("trace", ["tool", "seat"], at=0.55, hl_start=1.0, hl_gap=2.0)])
 add("leak", "The finding", [S("trace_tool", ["hit"], hl_red=True, hl_start=1.5), S("leak", ["conf", "flight", "seat"], at=0.42, hl_red=True, hl_start=1.2)])
 add("sessions", "Sessions", [S("sessions", ["session"])])
 add("datasets", "Datasets", [S("datasets", ["v11", "tau"], zoom=False)])

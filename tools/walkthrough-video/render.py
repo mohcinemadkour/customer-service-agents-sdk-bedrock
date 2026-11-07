@@ -88,7 +88,7 @@ def frame(sc, t):
         dim = Image.new("RGBA", (W, H), (15, 30, 51, 0))
         dd = ImageDraw.Draw(dim)
         alpha = max(a for _, a in shown)
-        dd.rectangle([0, 0, W, H], fill=(15, 30, 51, int(95 * alpha)))
+        dd.rectangle([0, 0, W, H], fill=(15, 30, 51, int(60 * alpha)))
         boxes = []
         for (x, y, w, h), a in shown:
             pad = 10
@@ -109,8 +109,19 @@ def frame(sc, t):
     return img
 
 def main():
-    plan = json.load(open(sys.argv[1])); out = sys.argv[2]; audio = sys.argv[3] if len(sys.argv) > 3 else None
+    args = [a for a in sys.argv[1:] if not a.startswith("--part=")]
+    part = next((a.split("=")[1] for a in sys.argv[1:] if a.startswith("--part=")), None)
+    plan = json.load(open(args[0])); out = args[1]; audio = args[2] if len(args) > 2 else None
     fps = plan.get("fps", 30); scenes = plan["scenes"]
+    if part:
+        i, n = map(int, part.split("/"))
+        tot = sum(s["dur"] for s in scenes); lo, hi = tot * i / n, tot * (i + 1) / n
+        acc = 0; sel = []
+        for s in scenes:
+            mid = acc + s["dur"] / 2
+            if lo <= mid < hi: sel.append(s)
+            acc += s["dur"]
+        scenes = sel
     cmd = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(fps), "-i", "-"]
     if audio:
         cmd += ["-i", audio, "-c:a", "aac", "-b:a", "160k", "-shortest"]
