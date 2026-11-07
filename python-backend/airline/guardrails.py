@@ -11,7 +11,8 @@ from agents import (
     input_guardrail,
 )
 
-GUARDRAIL_MODEL = "gpt-4.1-mini"
+import os
+GUARDRAIL_MODEL = os.environ.get("GUARDRAIL_MODEL", "gpt-4.1-mini")
 
 
 class RelevanceOutput(BaseModel):

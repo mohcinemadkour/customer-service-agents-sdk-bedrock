@@ -1,0 +1,13 @@
+# /etc/systemd/system/airline-app.service
+[Unit]
+Description=Airline multi-agent app (OpenAI Agents SDK on Bedrock)
+After=network.target docker.service
+
+[Service]
+WorkingDirectory=/opt/airline-app/python-backend
+EnvironmentFile=/etc/airline-app.env
+ExecStart=/opt/airline-app/python-backend/.venv/bin/uvicorn eval_api:app --host 127.0.0.1 --port 8100
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

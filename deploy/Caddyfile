@@ -1,0 +1,17 @@
+# Caddy reverse proxy with automatic HTTPS (Let's Encrypt) on sslip.io hostnames.
+# Replace 3.143.190.229 with your Elastic IP, and generate the hash with:  caddy hash-password
+langfuse.3.143.190.229.sslip.io {
+  reverse_proxy 127.0.0.1:3000
+}
+runner.3.143.190.229.sslip.io {
+  basic_auth {
+    <user> <bcrypt-hash>
+  }
+  reverse_proxy 127.0.0.1:8080
+}
+airline.3.143.190.229.sslip.io {
+  basic_auth {
+    <user> <bcrypt-hash>
+  }
+  reverse_proxy 127.0.0.1:8100
+}

@@ -22,7 +22,8 @@ from .tools import (
     update_seat,
 )
 
-MODEL = "gpt-5.2"
+import os
+MODEL = os.environ.get("AGENT_MODEL", "gpt-5.2")
 
 
 def seat_services_instructions(

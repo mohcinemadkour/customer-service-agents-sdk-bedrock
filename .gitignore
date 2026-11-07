@@ -132,4 +132,7 @@ node_modules/
 
 # ui stuff
 
-ui/.next/
+ui/.next/.venv/
+*.pyc
+evaluation/results/
+.next/

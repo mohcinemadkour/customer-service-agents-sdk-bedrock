@@ -1,0 +1,10 @@
+# Versions running on the EvalTrust lab server (2026-11-07).
+# Install on top of requirements.txt:  pip install -r requirements.txt -r requirements-evaltrust.txt
+openai-agents[litellm]==0.24.0
+openai-chatkit==1.6.5
+litellm==1.108.2
+boto3==1.43.126
+langfuse==5.2.0
+openinference-instrumentation-openai-agents==2.7.1
+fastapi==0.162.0
+uvicorn==0.54.0
