@@ -1,0 +1,18 @@
+{
+ "intro": 18.85,
+ "setup": 16.22,
+ "tracing": 20.73,
+ "trace": 24.31,
+ "leak": 29.66,
+ "sessions": 9.67,
+ "datasets": 17.13,
+ "items": 14.66,
+ "experiments": 12.47,
+ "run": 20.93,
+ "zero": 14.73,
+ "compare": 13.89,
+ "rules": 19.73,
+ "report": 16.72,
+ "tau": 9.92,
+ "wrap": 17.61
+}

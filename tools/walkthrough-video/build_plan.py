@@ -39,12 +39,12 @@ def add(sid, label, shots=None, card=None):
 add("intro", None, card=dict(title="Reading a validation in Langfuse", sub=["EvalTrust internal training", "Case: OpenAI airline support agents on Claude in Amazon Bedrock"]))
 add("setup", "The lab", [S("home", ["project"])])
 add("tracing", "Tracing", [S("traces", ["session"])])
-add("trace", "One trace: AL-051", [S("trace", ["g1", "g2"], hl_start=6.0, hl_gap=1.2), S("trace", ["tool", "seat"], at=0.55, hl_start=1.0, hl_gap=2.0)])
+add("trace", "One trace: AL-051", [S("trace", ["g1", "g2"], hl_start=6.0, hl_gap=1.2), S("trace", ["tool", "seat"], at=0.62, hl_start=1.0, hl_gap=2.0)])
 add("leak", "The finding", [S("trace_tool", ["hit"], hl_red=True, hl_start=1.5), S("leak", ["conf", "flight", "seat"], at=0.42, hl_red=True, hl_start=1.2)])
 add("sessions", "Sessions", [S("sessions", ["session"])])
 add("datasets", "Datasets", [S("datasets", ["v11", "tau"], zoom=False)])
 add("items", "Golden cases", [S("items", ["al51", "exp"], zoom=False)])
-add("experiments", "Experiments", [S("experiments", ["run"]), S("experiments_gate", ["crit", "gate"], at=0.45)])
+add("experiments", "Experiments", [S("experiments", ["run"]), S("experiments_gate", ["crit", "gate"], at=0.38)])
 add("run", "One run, every case", [S("run", ["bi", "rows"], zoom=False)])
 zb = B.get("zero", {}); a51 = zb.get("al51"); near = None
 if a51 and zb.get("bi"):
@@ -53,7 +53,7 @@ if a51 and zb.get("bi"):
 B.setdefault("zero", {})["near"] = near
 add("zero", "From a zero to its trace", [S("zero", ["al51", "near"], hl_red=True)])
 add("compare", "Comparing runs", [S("compare", ["base", "cmp", "routing"], zoom=False)])
-add("rules", "Where the rules live", [S("gh_criteria", ["bi", "owner", "target"], fallback=[300, 200, 1150, 500]), S("gh_scorer", ["fid"], at=0.55, fallback=[300, 380, 1150, 500])])
+add("rules", "Where the rules live", [S("gh_criteria", ["bi", "owner", "target"], fallback=[300, 200, 1150, 500]), S("gh_scorer", ["fid"], at=0.63, fallback=[300, 380, 1150, 500])])
 add("report", "The verdict", [S("report", ["hold", "bi"], hl_red=True, zoom=False)])
 add("tau", "Public benchmark", [S("tau", ["summary"], zoom=False)])
 add("wrap", None, card=dict(title="Reviewing a validation", sub=[], list=["Start with the verdict", "Find failed criteria and their owners", "Open the zeros, read the traces", "Fix, re-run the same version", "Compare the runs"]))

@@ -1,0 +1,263 @@
+1
+00:00:00,150 --> 00:00:04,872
+This walkthrough shows how we read an EvalTrust validation in Langfuse.
+
+2
+00:00:04,872 --> 00:00:12,386
+We'll follow one real finding, from a single trace, to the golden dataset, to the scores, to the release verdict.
+
+3
+00:00:12,386 --> 00:00:18,704
+The system is OpenAI's open-source airline support agents, running on Claude in Amazon Bedrock.
+
+4
+00:00:19,004 --> 00:00:21,620
+Everything runs in one AWS account:
+
+5
+00:00:21,620 --> 00:00:26,553
+the airline app, the EvalTrust runner, and a self-hosted Langfuse.
+
+6
+00:00:26,553 --> 00:00:31,934
+Every time a customer message goes through the app, Langfuse records it.
+
+7
+00:00:31,934 --> 00:00:34,923
+Open the project EvalTrust Lab to start.
+
+8
+00:00:35,223 --> 00:00:38,536
+Tracing lists every customer turn, newest first.
+
+9
+00:00:38,536 --> 00:00:42,678
+Each row is one message and the agents' full response to it.
+
+10
+00:00:42,678 --> 00:00:45,853
+The session name tells you where it came from.
+
+11
+00:00:45,853 --> 00:00:50,823
+Sessions starting with chat are manual conversations from the chat page.
+
+12
+00:00:50,823 --> 00:00:55,655
+Sessions starting with eval come from the runner, one per golden case.
+
+13
+00:00:55,955 --> 00:00:58,563
+Let's open case AL-051.
+
+14
+00:00:58,563 --> 00:01:05,545
+The customer gives their confirmation number, IR-D204, and asks for their seat.
+
+15
+00:01:05,545 --> 00:01:07,539
+The tree shows every step.
+
+16
+00:01:07,539 --> 00:01:09,764
+The two guardrails run first.
+
+17
+00:01:09,764 --> 00:01:15,748
+Then the triage agent calls get_trip_details, and hands off to the seat agent.
+
+18
+00:01:15,748 --> 00:01:19,968
+Each step has its own input, output, timing and tokens.
+
+19
+00:01:20,268 --> 00:01:22,108
+Click get_trip_details.
+
+20
+00:01:22,108 --> 00:01:26,107
+Its response says it loaded the on-time itinerary:
+
+21
+00:01:26,107 --> 00:01:28,507
+confirmation LL0EZ6.
+
+22
+00:01:28,507 --> 00:01:31,067
+That's another passenger's trip.
+
+23
+00:01:31,067 --> 00:01:34,986
+Now click the last generation and read the reply:
+
+24
+00:01:34,986 --> 00:01:41,306
+confirmation LL0EZ6, flight FLT-123, seat 23A.
+
+25
+00:01:41,306 --> 00:01:45,705
+Routing was correct, and every tool ran without errors.
+
+26
+00:01:45,705 --> 00:01:49,625
+Only a rule written for this business catches it.
+
+27
+00:01:49,925 --> 00:01:53,431
+Sessions groups the turns of one conversation together.
+
+28
+00:01:53,431 --> 00:01:59,297
+Use it for multi-turn cases, where the problem only shows up in the second or third message.
+
+29
+00:01:59,597 --> 00:02:01,927
+Datasets hold the golden cases.
+
+30
+00:02:01,927 --> 00:02:04,407
+There is one dataset per version:
+
+31
+00:02:04,407 --> 00:02:10,569
+golden-airline_v1 and v1.1, which adds the booking isolation cases.
+
+32
+00:02:10,569 --> 00:02:14,027
+Never edit a version after its results are in.
+
+33
+00:02:14,027 --> 00:02:16,431
+New rules go into a new version.
+
+34
+00:02:16,732 --> 00:02:18,856
+Each item is one golden case.
+
+35
+00:02:18,856 --> 00:02:25,671
+Input is the request, and expected output is a short summary of what must be true afterwards.
+
+36
+00:02:25,671 --> 00:02:31,093
+The exact expectations the scorers read live in the golden file on GitHub.
+
+37
+00:02:31,393 --> 00:02:34,496
+The Experiments tab lists every run of this dataset.
+
+38
+00:02:34,496 --> 00:02:36,763
+Each run carries its run-level scores:
+
+39
+00:02:36,763 --> 00:02:41,715
+one criterion score per signed criterion, and evaltrust.gate, which is the verdict.
+
+40
+00:02:41,715 --> 00:02:42,609
+One means pass.
+
+41
+00:02:42,609 --> 00:02:43,564
+Zero means hold.
+
+42
+00:02:43,864 --> 00:02:46,367
+Open a run to see every case.
+
+43
+00:02:46,367 --> 00:02:48,612
+Each column is one scorer:
+
+44
+00:02:48,612 --> 00:02:56,035
+one means passed, zero means failed, and a dash means the case doesn't test that rule.
+
+45
+00:02:56,035 --> 00:03:04,495
+Set rows per page to fifty or more, because the summary at the top only averages the current page.
+
+46
+00:03:04,795 --> 00:03:08,401
+Find a zero, and click the arrow next to the case.
+
+47
+00:03:08,401 --> 00:03:13,811
+That opens its trace, so every failed score leads straight to the evidence.
+
+48
+00:03:13,811 --> 00:03:19,220
+Here, booking isolation is zero on AL-051, the leak we just saw.
+
+49
+00:03:19,520 --> 00:03:25,453
+To compare two runs, pick a baseline and a comparison run of the same dataset version.
+
+50
+00:03:25,453 --> 00:03:30,075
+The arrows count how many cases got better or worse for each score.
+
+51
+00:03:30,075 --> 00:03:33,110
+Use this after a fix, to prove what changed.
+
+52
+00:03:33,410 --> 00:03:36,367
+Langfuse holds the results, not the rules.
+
+53
+00:03:36,367 --> 00:03:41,295
+The criteria file on GitHub lists each rule, its owner and its target.
+
+54
+00:03:41,295 --> 00:03:46,857
+Booking isolation must be one hundred percent, owned by privacy and compliance.
+
+55
+00:03:46,857 --> 00:03:52,841
+The scorer next to it is a short function that turns each trace into a one or a zero.
+
+56
+00:03:53,141 --> 00:03:56,265
+The runner turns those scores into the verdict.
+
+57
+00:03:56,265 --> 00:03:59,722
+The report shows every criterion against its target.
+
+58
+00:03:59,722 --> 00:04:03,909
+Booking isolation scored fifty percent, so the verdict is hold.
+
+59
+00:04:03,909 --> 00:04:09,559
+The same report lists each failed case with what was expected and what the agent did.
+
+60
+00:04:09,859 --> 00:04:13,611
+The τ² airline dataset holds the public benchmark.
+
+61
+00:04:13,611 --> 00:04:17,090
+It's a second, independent check on the same model:
+
+62
+00:04:17,090 --> 00:04:19,478
+reads are reliable, writes are not.
+
+63
+00:04:19,777 --> 00:04:21,733
+So, to review a validation:
+
+64
+00:04:21,733 --> 00:04:29,193
+start with the verdict, find the failed criteria and their owners, open the zeros, and read the traces.
+
+65
+00:04:29,193 --> 00:04:32,597
+Then fix, re-run the same version, and compare.
+
+66
+00:04:32,597 --> 00:04:37,088
+Every number in the report traces back to a real conversation.
