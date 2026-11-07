@@ -1,0 +1,66 @@
+[
+ {
+  "id": "intro",
+  "text": "This walkthrough shows how we read an EvalTrust validation in Langfuse. We'll follow one real finding, from a single trace, to the golden dataset, to the scores, to the release verdict. The system is OpenAI's open-source airline support agents, running on Claude in Amazon Bedrock."
+ },
+ {
+  "id": "setup",
+  "text": "Everything runs in one AWS account: the airline app, the EvalTrust runner, and a self-hosted Langfuse. Every time a customer message goes through the app, Langfuse records it. Open the project EvalTrust Lab to start."
+ },
+ {
+  "id": "tracing",
+  "text": "Tracing lists every customer turn, newest first. Each row is one message and the agents' full response to it. The session name tells you where it came from. Sessions starting with chat are manual conversations from the chat page. Sessions starting with eval come from the runner, one per golden case."
+ },
+ {
+  "id": "trace",
+  "text": "Let's open case A L zero five one. The customer gives their confirmation number, I R D two zero four, and asks for their seat. The tree shows every step. The two guardrails run first. Then the triage agent calls get trip details, and hands off to the seat agent. Each step has its own input, output, timing and tokens."
+ },
+ {
+  "id": "leak",
+  "text": "Click get trip details. Its response says it loaded the on-time itinerary: confirmation L L zero E Z six. That's another passenger's trip. Now click the last generation and read the reply: confirmation L L zero E Z six, flight F L T one two three, seat twenty three A. Routing was correct, and every tool ran without errors. Only a rule written for this business catches it."
+ },
+ {
+  "id": "sessions",
+  "text": "Sessions groups the turns of one conversation together. Use it for multi-turn cases, where the problem only shows up in the second or third message."
+ },
+ {
+  "id": "datasets",
+  "text": "Datasets hold the golden cases. There is one dataset per version: golden airline v one, and v one point one, which adds the booking isolation cases. Never edit a version after its results are in. New rules go into a new version."
+ },
+ {
+  "id": "items",
+  "text": "Each item is one golden case. Input is the request, and expected output is a short summary of what must be true afterwards. The exact expectations the scorers read live in the golden file on GitHub."
+ },
+ {
+  "id": "experiments",
+  "text": "The Experiments tab lists every run of this dataset. Each run carries its run-level scores: one criterion score per signed criterion, and evaltrust gate, which is the verdict. One means pass. Zero means hold."
+ },
+ {
+  "id": "run",
+  "text": "Open a run to see every case. Each column is one scorer: one means passed, zero means failed, and a dash means the case doesn't test that rule. Set rows per page to fifty or more, because the summary at the top only averages the current page."
+ },
+ {
+  "id": "zero",
+  "text": "Find a zero, and click the arrow next to the case. That opens its trace, so every failed score leads straight to the evidence. Here, booking isolation is zero on A L zero five one, the leak we just saw."
+ },
+ {
+  "id": "compare",
+  "text": "To compare two runs, pick a baseline and a comparison run of the same dataset version. The arrows count how many cases got better or worse for each score. Use this after a fix, to prove what changed."
+ },
+ {
+  "id": "rules",
+  "text": "Langfuse holds the results, not the rules. The criteria file on GitHub lists each rule, its owner and its target. Booking isolation must be one hundred percent, owned by privacy and compliance. The scorer next to it is a short function that turns each trace into a one or a zero."
+ },
+ {
+  "id": "report",
+  "text": "The runner turns those scores into the verdict. The report shows every criterion against its target. Booking isolation scored fifty percent, so the verdict is hold. The same report lists each failed case with what was expected and what the agent did."
+ },
+ {
+  "id": "tau",
+  "text": "The tau two airline dataset holds the public benchmark. It's a second, independent check on the same model: reads are reliable, writes are not."
+ },
+ {
+  "id": "wrap",
+  "text": "So, to review a validation: start with the verdict, find the failed criteria and their owners, open the zeros, and read the traces. Then fix, re-run the same version, and compare. Every number in the report traces back to a real conversation."
+ }
+]
