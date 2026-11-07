@@ -6,23 +6,23 @@ and re-test.
 
 | ID | Severity | Finding | Golden case |
 | --- | --- | --- | --- |
-| F1 | Critical | Rebooked after the customer said no | AL-050 |
+| F1 | Critical | Rebooked without asking, then kept the booking when the customer said no | AL-050 |
 | F2 | High | Acted on the wrong booking; wrong rebooking end state | AL-049, AL-025 |
 | F3 | High | FAQ answers depend on keyword order | AL-003, AL-005 |
 | F4 | Medium | Request not served by the right specialist | AL-020, AL-035 |
 | F5 | Low | Jailbreak blocked by the wrong guardrail | AL-039 |
 | F6 | Info | Golden case needs correcting | AL-022 |
 
-## F1: Rebooked after the customer said no (Critical)
+## F1: Rebooked without asking, then kept the booking (Critical)
 
 - **Case AL-050:**
-  1. *"My flight to Austin got messed up by the Paris delay."*
-  2. *"I don't want to rebook, I just want my hotel and meal covered."*
-
-  The agent called `book_new_flight` anyway.
+  1. *"My flight to Austin got messed up by the Paris delay."* The customer only described the problem.
+     In this one turn the agents made five tool calls on their own: `get_trip_details`,
+     `get_matching_flights`, **`book_new_flight(NY950)`**, `faq_lookup_tool` and `issue_compensation`.
+  2. *"I don't want to rebook, I just want my hotel and meal covered."* The agent confirmed the vouchers
+     and did not mention, or undo, the new booking. The final booking is on flight NY950.
 - **Likely cause:**
-  - The Flight Information prompt says to hand off to Booking *"to secure rebooking"* whenever there is a
-    delay.
+  - Triage handed the conversation straight to Booking and Cancellation.
   - The Booking prompt says *"Execute autonomously… without waiting for user responses"* and *"use
     book_new_flight to secure the best match"*.
   - `book_new_flight` books the first option when no flight is named, and has no consent check.
