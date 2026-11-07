@@ -1,6 +1,6 @@
 # Evaluation harness (EvalTrust runner)
 
-Scores the airline app against signed acceptance criteria. Full explanation: [docs/09-evaluation.md](../docs/09-evaluation.md).
+Scores the airline app against signed acceptance criteria. Results: [docs/09-evaluation.md](../docs/09-evaluation.md) · How to add criteria and read scores: [docs/11](../docs/11-criteria-and-scores-playbook.md) · Runner: [docs/12](../docs/12-runner.md).
 
 | File | Purpose |
 | --- | --- |
@@ -13,7 +13,8 @@ Scores the airline app against signed acceptance criteria. Full explanation: [do
 | `adapters/systems.py` | How the runner calls a system; `AirlineApp` posts to `/eval/conversation` |
 | `langfuse_export.py` | Writes a run to Langfuse as a dataset experiment |
 | `tau2_to_langfuse.py` | Loads τ²-bench results into Langfuse (dataset `tau2-airline`) |
-| `scorers.py` | Scorers for the runner's built-in prior-authorization mock (not used for the airline app) |
+| `webapp.py` | Runner web page (Flask): run form, previous runs, reports. See [docs/12-runner.md](../docs/12-runner.md) |
+| `scorers.py`, `criteria.json`, `golden/priorauth_v1.2.csv` | The web page's built-in prior-authorization sample (12 cases, 6 criteria) |
 
 ```bash
 pip install -r requirements.txt

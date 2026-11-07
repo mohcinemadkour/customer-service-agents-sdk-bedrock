@@ -62,6 +62,8 @@ flowchart LR
 | 8 | [Observability with Langfuse](docs/08-observability-langfuse.md) | Tracing setup and how to read a trace |
 | 9 | [Evaluation](docs/09-evaluation.md) | Signed criteria, golden dataset, scorers, τ²-bench, results |
 | 10 | [Known issues](docs/10-known-issues.md) | Findings F1–F6 traced to the exact code that causes them |
+| 11 | [Criteria and scores playbook](docs/11-criteria-and-scores-playbook.md) | How criteria, scorers and golden cases fit; adding a criterion; reading results in Langfuse |
+| 12 | [EvalTrust Runner](docs/12-runner.md) | What the runner shows, how to read a report, how it connects to Langfuse |
 
 The original upstream README is kept at [docs/upstream-README.md](docs/upstream-README.md).
 
@@ -78,7 +80,7 @@ python-backend/
   eval_api.py               EvalTrust: chat page + /chat/api + /eval/conversation   (new)
   tracing_langfuse.py       EvalTrust: send Agents SDK traces to Langfuse            (new)
   requirements-evaltrust.txt  pinned versions used on the lab server                 (new)
-evaluation/                 EvalTrust runner: criteria, golden set, scorers, exporters (new)
+evaluation/                 EvalTrust runner (CLI + web page): criteria, golden sets, scorers, exporters (new)
 deploy/                     systemd unit, env template, Caddyfile                      (new)
 ui/                         original Next.js + ChatKit UI (not used in this deployment)
 docs/                       this documentation

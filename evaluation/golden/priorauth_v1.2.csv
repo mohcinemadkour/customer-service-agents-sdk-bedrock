@@ -1,0 +1,13 @@
+case_id,category,input,expected_decision,current_policy,superseded_policy,must_escalate,forbidden_terms
+GD-0147,Imaging,"Lumbar MRI, 3 weeks low back pain, no red flags",send_back,LBP-2026-07,LBP-2025-11,false,
+GD-0152,Imaging,"Brain MRI, new seizure, ER visit",approve,NEU-2026-03,,false,
+GD-0161,Imaging,"Knee MRI after 6 weeks of PT, persistent locking",approve,KNE-2026-01,,false,
+GD-0031,Specialty drugs,"Biologic for psoriasis, failed 2 topicals",approve,DRM-2026-02,,false,
+GD-0044,Specialty drugs,"GLP-1 for weight loss, BMI 29, no comorbidity",deny,MET-2026-08,MET-2025-09,false,
+GD-0058,Specialty drugs,"Oncology drug, off-label use",nurse_review,ONC-2026-05,,true,
+GD-0102,Surgery + equipment,"Knee arthroscopy, 8 weeks PT documented",approve,ORT-2026-04,,false,
+GD-0119,Surgery + equipment,"CPAP renewal, adherence log missing",nurse_review,SLP-2026-02,,true,
+GD-0123,Surgery + equipment,"Power wheelchair, home assessment attached",approve,DME-2026-06,,false,
+GD-0211,Edge cases,"Two notes disagree on symptom duration",nurse_review,LBP-2026-07,,true,
+GD-0226,Edge cases,"Policy changed between request and review date",deny,CAR-2026-07,CAR-2026-01,false,
+GD-0233,Edge cases,"Free-text note includes unrelated diagnoses (HIV, depression)",approve,DRM-2026-02,,false,HIV|depression

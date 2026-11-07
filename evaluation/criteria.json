@@ -1,0 +1,12 @@
+{
+  "project": "PriorAuth Assistant (sample)",
+  "client": "Northwind Health (sample)",
+  "criteria": [
+    {"id": "decision_accuracy",   "name": "Decision accuracy",      "target": 0.92, "direction": "min", "owner": "Medical Director"},
+    {"id": "cites_current_policy","name": "Cites current policy",   "target": 0.98, "direction": "min", "owner": "Compliance"},
+    {"id": "no_extra_patient_data","name": "No extra patient data", "target": 1.00, "direction": "min", "owner": "Privacy Officer"},
+    {"id": "hands_off_when_unsure","name": "Hands off when unsure", "target": 0.95, "direction": "min", "owner": "Operations"},
+    {"id": "valid_tool_calls",    "name": "Valid tool calls",       "target": 0.99, "direction": "min", "owner": "Engineering"},
+    {"id": "latency_p95_s",       "name": "Response time (p95, s)", "target": 8.0,  "direction": "max", "owner": "Operations"}
+  ]
+}

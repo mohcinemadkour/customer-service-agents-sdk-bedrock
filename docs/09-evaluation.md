@@ -148,6 +148,8 @@ conversation.
 
 ## Adding a criterion: booking isolation (v1.1)
 
+The general method for adding criteria and reading scores is in the [playbook](11-criteria-and-scores-playbook.md).
+
 This is an example of a client-specific criterion that a generic eval tool doesn't provide. It was added
 **after** run 3, so it lives in new v1.1 files. The signed v1 files and the run 3 verdict are unchanged.
 
