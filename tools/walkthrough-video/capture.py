@@ -65,7 +65,7 @@ async def run_actions(page, actions):
 
 SHOTS = [
     ("home", P, [], {"project": ("EvalTrust Lab", "first")}),
-    ("traces", P + "/traces", [], {"session": ("eval-AL-0", "first"), "tracing": ("Tracing", "first")}),
+    ("traces", P + "/traces", [], {"session": ("eval-", "first"), "tracing": ("Tracing", "first")}),
     ("trace", TRACE, [], {"g1": ("Relevance Guardrail", "first"), "g2": ("Jailbreak Guardrail", "first"),
                            "tool": ("get_trip_details", "first"), "seat": ("handoff to Seat", "first")}),
     ("trace_tool", TRACE, [("click_text", "get_trip_details")], {"tool": ("get_trip_details", "first"), "hit": ("LL0EZ6", "first"), "on_time": ("on_time", "first")}),
@@ -79,14 +79,14 @@ SHOTS = [
     ("zero", P + "/experiments/results?baseline=9000f818a238fd5b", [("rows50",), ("page", 2), ("reveal", "AL-051")], {"al51": ("AL-051", "first"), "bi": ("booking_isolation", "all")}),
     ("compare", P + "/experiments/results?baseline=84a0cef6d1c9b9ac&c=406b14d157f189d0", [], {"base": ("Baseline", "first"), "cmp": ("Compare", "first"), "routing": ("routing_correct", "first")}),
     ("tau", P + "/experiments/results?baseline=638f595efca62aa0", [], {"summary": ("SUMMARY", "first")}),
-    ("gh_criteria", GH + "criteria_airline_v1.1.json", [("reveal", "booking_isolation")], {"bi": ("booking_isolation", "last"), "owner": ("Privacy / Compliance", "first")}),
-    ("gh_scorer", GH + "scorers_airline.py#L112", [("wait", 2500), ("reveal", "def booking_isolation")], {"def": ("def booking_isolation", "first"), "fid": ("foreign_ids", "first")}),
+    ("gh_criteria", GH + "criteria_airline_v1.1.json", [("reveal", "booking_isolation")], {"bi": ("isolation", "last"), "owner": ("Privacy", "first"), "target": ("1.0", "last")}),
+    ("gh_scorer", GH + "scorers_airline.py#L112", [("wait", 2500), ("reveal", "def booking_isolation")], {"def": ("booking_isolation", "first"), "fid": ("foreign_ids", "first")}),
     ("report", "http://127.0.0.1:8080/report/airline-v1.1-run1", [], {"hold": ("HOLD", "first"), "bi": ("another customer", "first")}),
 ]
 
 async def main(only=None):
     os.makedirs(OUT, exist_ok=True)
-    boxes = {}
+    boxes = json.load(open(f"{OUT}/boxes.json")) if os.path.exists(f"{OUT}/boxes.json") else {}
     async with async_playwright() as p:
         b = await p.chromium.launch()
         ctx = await b.new_context(viewport={"width": 1920, "height": 1080}, device_scale_factor=2, color_scheme="light")

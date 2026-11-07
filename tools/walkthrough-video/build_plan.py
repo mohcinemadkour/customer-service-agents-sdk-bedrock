@@ -45,9 +45,14 @@ add("datasets", "Datasets", [S("datasets", ["v11", "tau"], zoom=False)])
 add("items", "Golden cases", [S("items", ["al51", "exp"], zoom=False)])
 add("experiments", "Experiments", [S("experiments", ["run"]), S("experiments_gate", ["crit", "gate"], at=0.45)])
 add("run", "One run, every case", [S("run", ["bi", "rows"], zoom=False)])
-add("zero", "From a zero to its trace", [S("zero", ["al51", "bi"], hl_red=True)])
+zb = B.get("zero", {}); a51 = zb.get("al51"); near = None
+if a51 and zb.get("bi"):
+    below = [x for x in zb["bi"] if x[1] > a51[1]]
+    near = min(below, key=lambda x: x[1] - a51[1]) if below else None
+B["zero"]["near"] = near
+add("zero", "From a zero to its trace", [S("zero", ["al51", "near"], hl_red=True)])
 add("compare", "Comparing runs", [S("compare", ["base", "cmp", "routing"], zoom=False)])
-add("rules", "Where the rules live", [S("gh_criteria", ["bi", "owner"]), S("gh_scorer", ["def", "fid"], at=0.55)])
+add("rules", "Where the rules live", [S("gh_criteria", ["bi", "owner", "target"]), S("gh_scorer", ["def", "fid"], at=0.55)])
 add("report", "The verdict", [S("report", ["hold", "bi"], hl_red=True, zoom=False)])
 add("tau", "Public benchmark", [S("tau", ["summary"], zoom=False)])
 add("wrap", None, card=dict(title="Reviewing a validation", sub=[], list=["Start with the verdict", "Find failed criteria and their owners", "Open the zeros, read the traces", "Fix, re-run the same version", "Compare the runs"]))
