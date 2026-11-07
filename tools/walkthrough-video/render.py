@@ -22,7 +22,7 @@ F_LABEL = font(30, True); F_T1 = font(76, True); F_T2 = font(36); F_LIST = font(
 cache = {}
 def shot(name):
     if name not in cache:
-        cache[name] = Image.open(f"{SHOTS}/{name}.png").convert("RGB").resize((W, H))
+        cache[name] = Image.open(f"{SHOTS}/{name}.png").convert("RGB")
     return cache[name]
 
 def ease(t):
@@ -76,7 +76,8 @@ def frame(sc, t):
     else:
         rect = [0, 0, W, H]
     sx, sy = rect[2] / W, rect[3] / H
-    img = base.crop((int(rect[0]), int(rect[1]), int(rect[0] + rect[2]), int(rect[1] + rect[3]))).resize((W, H), Image.BILINEAR)
+    kk = base.width / W
+    img = base.crop((int(rect[0] * kk), int(rect[1] * kk), int((rect[0] + rect[2]) * kk), int((rect[1] + rect[3]) * kk))).resize((W, H), Image.BILINEAR, reducing_gap=2.0)
     hls = cur.get("hl", [])
     shown = []
     for i, hb in enumerate(hls):
