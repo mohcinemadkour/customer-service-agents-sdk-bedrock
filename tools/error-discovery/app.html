@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Error discovery</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<style>
+:root{
+  --ink:#16202e; --ink2:#3a4656; --muted:#6b7686; --rule:#e3e7ec; --bg:#f6f7f8; --paper:#fff;
+  /* role hues (one channel: who produced the segment) */
+  --user:#2463d6; --agent:#0f8a5f; --tool:#b26a00; --guard:#cc2f4a; --hand:#7a4cc4;
+  --hl:#ffe58a; --hl-line:#e0b400; --sug:#dfe8f7; --sug-line:#6d8fc9; --ann:#f28c28;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans)}
+button{font:inherit;cursor:pointer}
+/* top bar */
+#top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:18px;height:52px;padding:0 18px;background:var(--ink);color:#fff}
+#top h1{font-size:15px;margin:0;font-weight:650;white-space:nowrap}
+#top h1 small{font-weight:400;color:#aab4c2;margin-left:6px}
+.tabs{display:flex;gap:2px;background:rgba(255,255,255,.08);border-radius:8px;padding:3px}
+.tabs button{border:0;background:none;color:#cfd6df;padding:5px 14px;border-radius:6px;font-size:13.5px}
+.tabs button.on{background:#fff;color:var(--ink);font-weight:600}
+#counts{margin-left:auto;font-size:12.5px;color:#aab4c2;white-space:nowrap}
+#counts b{color:#fff;font-weight:600}
+/* layout */
+.view{display:none}.view.on{display:block}
+#review.on{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:calc(100vh - 52px)}
+#rail{border-right:1px solid var(--rule);background:var(--paper);padding:14px 0;position:sticky;top:52px;height:calc(100vh - 52px);overflow:auto}
+#rail h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 16px 8px}
+#rail ol{list-style:none;margin:0;padding:0}
+#rail li button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;padding:6px 16px;cursor:pointer;font-size:13px}
+#rail li button:hover{background:var(--bg)}
+#rail li button.on{background:#eef2f7;font-weight:600}
+#rail .dot{width:7px;height:7px;border-radius:50%;background:transparent;border:1.5px solid #c3cad3;flex:none}
+#rail .visited .dot{background:#c3cad3}
+#rail .noted .dot{background:var(--ann);border-color:var(--ann)}
+#rail .cat{color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rail .batch{font-size:11px;color:var(--muted);margin:12px 16px 4px;border-top:1px solid var(--rule);padding-top:8px}
+#stage{padding:28px 32px 120px;display:flex;gap:28px;justify-content:center}
+#doc{flex:1;max-width:720px;min-width:0}
+#margin{width:240px;flex:none;position:relative}
+/* header */
+.hd{margin-bottom:22px}
+.hd .id{font:600 13px var(--mono);color:var(--muted)}
+.hd h2{font-size:22px;line-height:1.3;margin:4px 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{font-size:12px;padding:2px 9px;border-radius:999px;background:#eceff3;color:var(--ink2)}
+.chip.flag{background:none;border:1px dashed #b9c1cb;color:var(--muted)}
+.scores{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.sc{font:12px var(--mono);padding:1px 7px;border-radius:4px;border:1px solid var(--rule);color:var(--muted)}
+.sc.fail{border-color:var(--ink);color:var(--ink);font-weight:700}
+.sc.fail::before{content:"✗ "}
+.sc.pass::before{content:"✓ "}
+.nav{display:flex;gap:8px;margin-left:auto}
+.nav button{border:1px solid var(--rule);background:var(--paper);border-radius:6px;padding:3px 10px;font-size:12.5px}
+/* blocks */
+.meta{background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:10px 14px;margin-bottom:34px}
+.meta .lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.meta .seg{font:13px/1.5 var(--mono);color:var(--ink2);white-space:pre-wrap}
+.turn{margin-bottom:40px}
+.turn-lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
+.blk{background:var(--paper);border-left:4px solid var(--c);border-radius:0 8px 8px 0;padding:9px 14px 10px;margin-bottom:6px}
+.blk .who{font-size:11.5px;font-weight:700;color:var(--c);margin-bottom:2px;display:flex;gap:8px;align-items:baseline}
+.blk .who span{font-weight:400;color:var(--muted)}
+.blk.user{--c:var(--user)}.blk.agent{--c:var(--agent)}.blk.guard{--c:var(--guard)}
+.agent-grp{margin-bottom:20px}
+.handoff{--c:var(--hand);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--hand);font-weight:600;margin:0 0 6px 2px}
+.handoff::before{content:"";width:18px;height:0;border-top:2px dashed var(--hand)}
+.toolbox{--c:var(--tool);border:1px solid #ecdcc4;border-left:4px solid var(--tool);border-radius:0 8px 8px 0;background:#fffcf6;margin-bottom:6px}
+.toolbox .call{padding:8px 14px 6px}
+.toolbox .who{font-size:11.5px;font-weight:700;color:var(--tool)}
+.toolbox .fn{font:600 13.5px var(--mono);color:var(--ink)}
+.toolbox pre,.blk pre{margin:4px 0 0;font:12.5px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word;color:var(--ink2)}
+.toolbox .res{border-top:1px dashed #ecdcc4;padding:6px 14px 8px}
+.toolbox summary{cursor:pointer;font-size:12px;color:var(--muted);list-style:none}
+.toolbox summary::before{content:"▸ ";color:var(--tool)}
+.toolbox details[open] summary::before{content:"▾ "}
+.toolbox .rlab{font-size:11px;color:var(--tool);font-weight:700}
+.prose p{margin:4px 0}.prose ul,.prose ol{margin:4px 0;padding-left:22px}
+.prose table{border-collapse:collapse;font-size:13px;margin:6px 0}.prose td,.prose th{border:1px solid var(--rule);padding:3px 8px}
+.prose h1,.prose h2,.prose h3{font-size:15px;margin:8px 0 4px}
+.prose hr{border:0;border-top:1px solid var(--rule)}
+.boiler{opacity:.45}
+.ctx{font:12px var(--mono);color:var(--muted);margin:4px 0 0 2px}
+.err{color:var(--guard);font:12.5px var(--mono)}
+/* highlights */
+.hl{background:var(--hl);box-shadow:0 1px 0 var(--hl-line);border-radius:2px;cursor:pointer}
+.sg{background:var(--sug);outline:1px dashed var(--sug-line);border-radius:2px;cursor:pointer}
+.pending-highlight{background:#b7d3ff;border-radius:2px}
+.hl.lit,.sg.lit{outline:2px solid var(--ink);outline-offset:1px}
+.flash{animation:flash 1.4s ease}
+@keyframes flash{0%,40%{background:#ffb84d}}
+/* margin notes */
+.mn{position:absolute;left:0;width:240px;background:var(--paper);border:1px solid var(--rule);border-left:3px solid var(--hl-line);border-radius:0 6px 6px 0;padding:7px 10px;font-size:13px;box-shadow:0 2px 8px -4px rgba(0,0,0,.15);transition:top .15s}
+.mn.sug{border-left-color:var(--sug-line);background:#f8faff}
+.mn.lit{outline:2px solid var(--ink)}
+.mn .q{font-size:11.5px;color:var(--muted);font-style:italic;max-height:3.2em;overflow:hidden}
+.mn .tx{margin-top:3px;white-space:pre-wrap}
+.mn .tag{font-size:10.5px;font-weight:700;color:var(--sug-line);text-transform:uppercase;letter-spacing:.05em}
+.mn .act{display:flex;gap:6px;margin-top:6px}
+.mn .act button{border:1px solid var(--rule);background:var(--paper);border-radius:4px;font-size:11.5px;padding:1px 8px}
+.mn .act .yes{background:var(--ink);color:#fff;border-color:var(--ink)}
+.mn .hov{display:none}.mn:hover .hov{display:flex}
+.mn textarea{width:100%;font:inherit;font-size:13px;border:1px solid var(--rule);border-radius:4px;padding:4px;resize:vertical}
+/* popover */
+#pop{position:absolute;z-index:40;display:none;background:var(--ink);padding:8px;border-radius:8px;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);width:340px}
+#pop input{width:100%;border:0;border-radius:5px;padding:7px 9px;font:inherit;font-size:14px}
+#pop small{display:block;color:#aab4c2;font-size:11px;margin-top:5px}
+/* toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:13.5px;transition:transform .25s;z-index:50}
+#toast.on{transform:translateX(-50%) translateY(0)}
+/* map */
+#map{padding:24px}
+#map .wrapm{max-width:1100px;margin:0 auto;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:16px;position:relative}
+#map #svg{width:100%;height:auto;display:block}
+#map .legend span{display:inline-flex;align-items:center;gap:5px}
+#map .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink2);margin-top:8px}
+#tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:12.5px;padding:7px 10px;border-radius:6px;max-width:300px;display:none;z-index:5}
+/* progress */
+#progress{padding:24px}
+#progress .col{max-width:1100px;margin:0 auto}
+#progress h2{font-size:17px;margin:0 0 4px}
+#progress .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+#tree{position:relative;height:440px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.tm{position:absolute;border:2px solid var(--bg);padding:8px 10px;overflow:auto;color:#fff}
+.tm h4{margin:0;font-size:13.5px}.tm .n{font-size:11.5px;opacity:.85}
+.tm .d{font-size:11.5px;opacity:.85;margin:2px 0 4px}
+.tm ul{margin:4px 0 0;padding-left:16px;font-size:12px}
+.tm li{cursor:pointer;margin-bottom:2px}.tm li:hover{text-decoration:underline}
+.empty{color:var(--muted);font-size:14px;padding:30px;text-align:center}
+#sugs{margin-top:34px}
+.sbar{display:flex;gap:10px;align-items:center;margin-bottom:8px;font-size:13px}
+.sbar button{border:1px solid var(--rule);background:var(--paper);border-radius:6px;padding:4px 12px}
+.sbar .yes{background:var(--ink);color:#fff;border-color:var(--ink)}
+table.st{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--rule);font-size:13px}
+table.st td,table.st th{border-bottom:1px solid var(--rule);padding:7px 10px;text-align:left;vertical-align:top}
+table.st th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+table.st .q{cursor:pointer;color:var(--ink2);font-style:italic}.table.st .q:hover{text-decoration:underline}
+@media (max-width:1100px){#stage{flex-direction:column}#margin{width:100%;position:static}.mn{position:static;width:auto;margin-bottom:8px}}
+</style>
+</head>
+<body>
+<header id="top">
+  <h1>Error discovery <small id="srcname"></small></h1>
+  <div class="tabs" role="tablist">
+    <button data-v="review" class="on">Review</button>
+    <button data-v="map">Map</button>
+    <button data-v="progress">Progress</button>
+  </div>
+  <div id="counts"></div>
+</header>
+
+<section id="review" class="view on">
+  <nav id="rail"></nav>
+  <div>
+    <div id="stage"><article id="doc"></article><aside id="margin"></aside></div>
+  </div>
+</section>
+<section id="map" class="view"><div class="wrapm"><svg id="svg" viewBox="0 0 1000 600"></svg><div id="tip"></div><div class="legend" id="legend"></div></div></section>
+<section id="progress" class="view"><div class="col">
+  <h2>Failure modes</h2><div class="sub" id="tmsub"></div><div id="tree"></div>
+  <div id="sugs"></div>
+</div></section>
+
+<div id="pop"><input id="popin" placeholder="What's wrong here? Enter to save, Esc to cancel"><small id="popq"></small></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const api=(p,body)=>fetch("api/"+p,body===undefined?{cache:"no-store"}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json());
+const uid=()=>Math.random().toString(36).slice(2,10);
+const LS="errdisc.annotations";
+
+let DB=null, REC={}, BOILER=new Set(), SAMPLES={ids:[],batches:[]}, ANN=[], SUG=[], PAT={modes:[]}, GRAPH={nodes:[]}, STATE={visited:[],current:null};
+let cur=null, view="review", pending=null;
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),3500)}
+
+/* ---------------- data ---------------- */
+async function boot(){
+  [DB,SAMPLES,ANN,SUG,PAT,GRAPH,STATE]=await Promise.all(["records","samples","annotations","suggestions","patterns","graph","state"].map(p=>api(p)));
+  DB.records.forEach(r=>REC[r.id]=r); BOILER=new Set((DB.boilerplate||[]).map(s=>s.trim()));
+  $("#srcname").textContent=DB.label||DB.source||"";
+  try{const local=JSON.parse(localStorage.getItem(LS)||"[]"); if(!ANN.length&&local.length){ANN=local; saveAnn(); toast("Restored "+local.length+" notes from this browser")}}catch(e){}
+  STATE.visited=STATE.visited||[];
+  const h=decodeURIComponent(location.hash.slice(1));
+  open(REC[h]&&SAMPLES.ids.includes(h)?h:(STATE.current&&SAMPLES.ids.includes(STATE.current)?STATE.current:SAMPLES.ids[0]));
+  setInterval(poll,5000);
+}
+async function poll(){
+  try{
+    const [s,g,p]=await Promise.all([api("samples"),api("suggestions"),api("patterns")]);
+    const newIds=s.ids.filter(i=>!SAMPLES.ids.includes(i));
+    const oldPend=new Set(SUG.filter(x=>x.status==="pending").map(x=>x.id));
+    const newSug=g.filter(x=>x.status==="pending"&&!oldPend.has(x.id));
+    const patChanged=JSON.stringify(p)!==JSON.stringify(PAT);
+    SAMPLES=s; SUG=g; PAT=p;
+    if(newIds.length) toast(newIds.length+" new sample"+(newIds.length>1?"s":"")+" added: "+newIds.join(", "));
+    else if(newSug.length) toast(newSug.length+" new agent suggestion"+(newSug.length>1?"s":"")+" to review");
+    else if(patChanged) toast("Failure modes updated");
+    if(newIds.length||newSug.length) {rail(); if(view==="review") renderRecord(); }
+    if(patChanged||newSug.length) {if(view==="progress") progress()}
+    counts();
+  }catch(e){}
+}
+function saveAnn(){localStorage.setItem(LS,JSON.stringify(ANN)); api("annotations",ANN).catch(()=>toast("Could not save to server; kept in this browser")); counts(); rail()}
+function saveState(){api("state",STATE).catch(()=>{})}
+function counts(){
+  const pend=SUG.filter(s=>s.status==="pending").length;
+  const vis=SAMPLES.ids.filter(i=>STATE.visited.includes(i)).length;
+  $("#counts").innerHTML=`<b>${vis}</b>/${SAMPLES.ids.length} opened · <b>${ANN.length}</b> notes · <b>${PAT.modes.length}</b> modes`+(pend?` · <b>${pend}</b> suggestions`:"");
+}
+
+/* ---------------- views ---------------- */
+$$(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
+function show(v){view=v;$$(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));$$(".view").forEach(s=>s.classList.toggle("on",s.id===v));
+  if(v==="map")map(); if(v==="progress")progress(); if(v==="review")requestAnimationFrame(layoutNotes)}
+
+/* ---------------- rail ---------------- */
+function rail(){
+  const noted=new Set(ANN.map(a=>a.record_id)); let h="<h3>Samples</h3>";
+  (SAMPLES.batches||[{ids:SAMPLES.ids}]).forEach((b,bi)=>{
+    if(!b.ids.length) return;
+    if(bi>0) h+=`<div class="batch">Added ${esc(b.why||"")}</div>`;
+    h+="<ol>"+b.ids.map(id=>{const r=REC[id]; if(!r) return "";
+      const cls=[id===cur?"on":"",STATE.visited.includes(id)?"visited":"",noted.has(id)?"noted":""].join(" ");
+      return `<li class="${cls}"><button class="${id===cur?"on":""}" data-id="${id}"><span class="dot"></span><span><b style="font-weight:600">${id}</b><br><span class="cat">${esc(r.category)}</span></span></button></li>`}).join("")+"</ol>";
+  });
+  $("#rail").innerHTML=h; $$("#rail button").forEach(b=>b.onclick=()=>open(b.dataset.id));
+}
+
+/* ---------------- record rendering ---------------- */
+function open(id){ if(!id) return; cur=id; location.hash=id; cancelPending();
+  if(!STATE.visited.includes(id)) STATE.visited.push(id); STATE.current=id; saveState();
+  rail(); renderRecord(); counts(); window.scrollTo(0,0)}
+
+function md(t){ try{ if(window.marked) return marked.parse(t,{breaks:true}); }catch(e){}
+  return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").split(/\n{2,}/).map(p=>"<p>"+p.replace(/\n/g,"<br>")+"</p>").join(""); }
+const pretty=o=>{try{return JSON.stringify(o,null,2)}catch(e){return String(o)}};
+
+function renderRecord(){
+  const r=REC[cur]; if(!r) return;
+  const idx=SAMPLES.ids.indexOf(cur);
+  const sc=Object.entries(r.scores||{}).filter(([k,v])=>v!==null&&v!==undefined).map(([k,v])=>`<span class="sc ${v===0?"fail":"pass"}" title="${k} = ${v}">${k}</span>`).join("");
+  let h=`<div class="hd"><div class="chips"><span class="id">${r.id}</span><span class="chip">${esc(r.category)}</span>${r.flags.map(f=>`<span class="chip flag">${esc(f)}</span>`).join("")}
+     <span class="nav"><button id="prev" ${idx<=0?"disabled":""}>← prev</button><button id="next" ${idx>=SAMPLES.ids.length-1?"disabled":""}>next →</button></span></div>
+     <h2>${esc(r.input.replace(/ ⏎ /g," / "))}</h2><div class="scores">${sc}</div></div>`;
+  h+=`<div class="meta"><div class="lab">Golden expectation</div><div class="seg" data-seg="expected">${esc(r.expected)}</div></div>`;
+  r.turns.forEach((t,ti)=>{
+    h+=`<div class="turn">`+(r.turns.length>1?`<div class="turn-lab">Turn ${ti+1} of ${r.turns.length}</div>`:"");
+    h+=`<div class="blk user"><div class="who">Customer</div><div class="seg" data-seg="t${ti}.user">${esc(t.user)}</div></div>`;
+    if(t.guardrail){ h+=`<div class="blk guard"><div class="who">Guardrail tripped <span>${esc(t.guardrail.name||"")}</span></div><div class="seg" data-seg="t${ti}.guard">${esc(t.guardrail.reasoning||"")}</div></div>`}
+    t.groups.forEach((g,gi)=>{
+      if(gi>0) h+=`<div class="handoff">handoff → ${esc(g.agent)}</div>`;
+      h+=`<div class="agent-grp">`;
+      g.tools.forEach((c,ci)=>{
+        const out=String(c.output??""); const long=out.length>260;
+        const key=`t${ti}.g${gi}.c${ci}`;
+        const touched=[...ANN,...SUG.filter(s=>s.status==="pending")].some(a=>a.record_id===r.id&&a.seg===key+".out");
+        h+=`<div class="toolbox"><div class="call"><div class="who">Tool call · ${esc(g.agent)}</div><div class="fn">${esc(c.name)}</div><pre class="seg" data-seg="${key}.args">${esc(pretty(c.args))}</pre></div>
+          <div class="res">${long?`<details ${touched?"open":""}><summary>Result · ${esc(out.slice(0,90))}…</summary><pre class="seg" data-seg="${key}.out">${esc(out)}</pre></details>`:`<div class="rlab">Result</div><pre class="seg" data-seg="${key}.out">${esc(out)}</pre>`}</div></div>`;
+      });
+      g.messages.forEach((m,mi)=>{
+        h+=`<div class="blk agent ${BOILER.has(m.trim())?"boiler":""}"><div class="who">${esc(g.agent)}${BOILER.has(m.trim())?"<span>repeated verbatim in many records</span>":""}</div><div class="seg prose" data-seg="t${ti}.g${gi}.m${mi}">${md(m)}</div></div>`;
+      });
+      h+=`</div>`;
+    });
+    if(t.error) h+=`<div class="err">error: ${esc(t.error)}</div>`;
+    const ctx=Object.entries(t.context||{}).filter(([k,v])=>v).map(([k,v])=>`${k}=${v}`).join("  ");
+    if(ctx) h+=`<div class="ctx">context after turn: ${esc(ctx)}</div>`;
+    h+=`</div>`;
+  });
+  $("#doc").innerHTML=h;
+  $("#prev").onclick=()=>open(SAMPLES.ids[idx-1]); $("#next").onclick=()=>open(SAMPLES.ids[idx+1]);
+  paint();
+}
+
+/* ---------------- text offsets & highlighting ---------------- */
+function textNodes(el){const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);const a=[];let n;while(n=w.nextNode())a.push(n);return a}
+function offsetIn(seg,node,off){let o=0;for(const t of textNodes(seg)){if(t===node)return o+off;o+=t.length}
+  // node is an element: count text before child index
+  const r=document.createRange();r.setStart(seg,0);r.setEnd(node,off);return r.toString().length}
+function wrap(seg,start,end,cls,attrs){
+  const spans=[];let o=0;
+  for(const t of textNodes(seg)){
+    const s=o,e=o+t.length;o=e;
+    if(e<=start||s>=end)continue;
+    let node=t,a=Math.max(start,s)-s,b=Math.min(end,e)-s;
+    if(b<node.length)node.splitText(b);
+    if(a>0)node=node.splitText(a);
+    const sp=document.createElement("span");sp.className=cls;for(const k in attrs)sp.setAttribute(k,attrs[k]);
+    node.parentNode.insertBefore(sp,node);sp.appendChild(node);spans.push(sp);
+  }
+  return spans;
+}
+function unwrap(sp){const p=sp.parentNode;if(!p)return;while(sp.firstChild)p.insertBefore(sp.firstChild,sp);p.removeChild(sp);p.normalize()}
+function locate(seg,a){const txt=seg.textContent;
+  if(a.start!=null&&txt.slice(a.start,a.end)===a.quote)return[a.start,a.end];
+  let i=txt.indexOf(a.quote); if(i<0){const q=a.quote.replace(/\s+/g," ").trim();const t2=txt.replace(/\s+/g," ");i=t2.indexOf(q);if(i<0)return null; // map whitespace-collapsed index back
+    let k=0,j=0;while(j<i&&k<txt.length){if(/\s/.test(txt[k])){while(k<txt.length&&/\s/.test(txt[k]))k++;j++}else{k++;j++}}return[k,k+a.quote.length]}
+  return[i,i+a.quote.length]}
+
+let MARKS=[]; // {kind:'ann'|'sug', item, spans}
+function paint(){
+  MARKS=[];const doc=$("#doc");
+  const items=[...ANN.filter(a=>a.record_id===cur).map(a=>({kind:"ann",item:a})),
+               ...SUG.filter(s=>s.record_id===cur&&s.status==="pending").map(s=>({kind:"sug",item:s}))];
+  for(const m of items){
+    const seg=doc.querySelector(`[data-seg="${CSS.escape(m.item.seg)}"]`); if(!seg)continue;
+    const loc=locate(seg,m.item); if(!loc)continue;
+    m.spans=wrap(seg,loc[0],loc[1],m.kind==="ann"?"hl":"sg",{"data-mid":m.item.id});
+    if(m.spans.length){const d=seg.closest("details");if(d)d.open=true;MARKS.push(m)}
+  }
+  doc.querySelectorAll("[data-mid]").forEach(sp=>{sp.onmouseenter=()=>lit(sp.dataset.mid,true);sp.onmouseleave=()=>lit(sp.dataset.mid,false);
+    sp.onclick=e=>{e.stopPropagation();const n=$(`.mn[data-mid="${sp.dataset.mid}"]`);if(n){n.scrollIntoView({block:"nearest",behavior:"smooth"})}}});
+  notes();
+}
+function lit(id,on){$$(`[data-mid="${id}"]`).forEach(e=>e.classList.toggle("lit",on))}
+
+/* ---------------- margin notes ---------------- */
+function notes(){
+  const mg=$("#margin");mg.innerHTML="";
+  for(const m of MARKS){
+    const a=m.item,el=document.createElement("div");el.className="mn"+(m.kind==="sug"?" sug":"");el.dataset.mid=a.id;
+    if(m.kind==="sug"){
+      el.innerHTML=`<div class="tag">agent suggestion${a.mode?" · "+esc(a.mode):""}</div><div class="q">“${esc(a.quote)}”</div><div class="tx">${esc(a.note||"")}</div>
+        <div class="act"><button class="yes">Accept</button><button class="no">Dismiss</button></div>`;
+      el.querySelector(".yes").onclick=()=>decide([a.id],"accepted");
+      el.querySelector(".no").onclick=()=>decide([a.id],"dismissed");
+    }else{
+      el.innerHTML=`<div class="q">“${esc(a.quote)}”</div><div class="tx">${esc(a.note)}</div><div class="act hov"><button class="ed">Edit</button><button class="del">Delete</button></div>`;
+      el.querySelector(".ed").onclick=()=>editNote(el,a);
+      el.querySelector(".del").onclick=()=>{ANN=ANN.filter(x=>x.id!==a.id);saveAnn();renderRecord()};
+    }
+    el.onmouseenter=()=>lit(a.id,true);el.onmouseleave=()=>lit(a.id,false);
+    mg.appendChild(el);
+  }
+  layoutNotes();
+}
+function layoutNotes(){
+  const mg=$("#margin");if(!mg||getComputedStyle(mg).position!=="relative")return;
+  const base=mg.getBoundingClientRect().top;
+  const rows=MARKS.map(m=>{const r=m.spans[0].getBoundingClientRect();return{el:mg.querySelector(`.mn[data-mid="${m.item.id}"]`),top:r.height?r.top-base:null}}).filter(x=>x.el);
+  rows.sort((a,b)=>(a.top??1e9)-(b.top??1e9));
+  let y=0;for(const r of rows){const t=Math.max(r.top??y,y);r.el.style.top=t+"px";y=t+r.el.offsetHeight+8}
+  mg.style.minHeight=y+"px";
+}
+window.addEventListener("resize",()=>requestAnimationFrame(layoutNotes));
+document.addEventListener("toggle",()=>requestAnimationFrame(layoutNotes),true);
+function editNote(el,a){
+  const tx=el.querySelector(".tx");tx.innerHTML=`<textarea rows="3">${esc(a.note)}</textarea>`;const ta=tx.querySelector("textarea");ta.focus();
+  ta.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();a.note=ta.value.trim()||a.note;a.edited=new Date().toISOString();saveAnn();renderRecord()}if(e.key==="Escape")renderRecord()};
+  layoutNotes();
+}
+function decide(ids,status){
+  const set=new Set(ids);
+  SUG.forEach(s=>{if(set.has(s.id)){s.status=status;
+    if(status==="accepted"&&!ANN.some(a=>a.suggestion_id===s.id))
+      ANN.push({id:uid(),record_id:s.record_id,seg:s.seg,start:s.start??null,end:s.end??null,quote:s.quote,note:s.note||s.mode||"",mode:s.mode||null,by:"agent-accepted",suggestion_id:s.id,created:new Date().toISOString()})}});
+  api("suggestions",{id:ids,status}).catch(()=>toast("Could not reach server"));
+  if(status==="accepted")saveAnn(); counts();
+  if(view==="review")renderRecord(); else progress();
+}
+
+/* ---------------- selection → popover ---------------- */
+$("#doc").addEventListener("mouseup",e=>{
+  if(e.target.closest("button,summary"))return;
+  setTimeout(()=>{
+    const sel=getSelection();if(!sel.rangeCount||sel.isCollapsed)return;
+    const rg=sel.getRangeAt(0);
+    const s1=(rg.startContainer.nodeType===1?rg.startContainer:rg.startContainer.parentElement).closest(".seg");
+    const s2=(rg.endContainer.nodeType===1?rg.endContainer:rg.endContainer.parentElement).closest(".seg");
+    if(!s1||s1!==s2){toast("Select text inside one block");return}
+    let a=offsetIn(s1,rg.startContainer,rg.startOffset),b=offsetIn(s1,rg.endContainer,rg.endOffset);
+    const txt=s1.textContent;while(a<b&&/\s/.test(txt[a]))a++;while(b>a&&/\s/.test(txt[b-1]))b--;
+    if(b-a<1)return;
+    const rect=rg.getBoundingClientRect();
+    cancelPending();
+    const spans=wrap(s1,a,b,"pending-highlight",{});
+    sel.removeAllRanges();
+    pending={seg:s1.dataset.seg,start:a,end:b,quote:txt.slice(a,b),spans};
+    const pop=$("#pop");pop.style.display="block";
+    pop.style.left=Math.min(window.scrollX+rect.left,window.scrollX+innerWidth-360)+"px";pop.style.top=(window.scrollY+rect.bottom+8)+"px";
+    $("#popq").textContent="“"+(pending.quote.length>90?pending.quote.slice(0,90)+"…":pending.quote)+"”";
+    const inp=$("#popin");inp.value="";inp.focus();
+  },0);
+});
+$("#popin").addEventListener("keydown",e=>{
+  if(e.key==="Escape"){cancelPending();return}
+  if(e.key==="Enter"&&pending){const note=e.target.value.trim();if(!note)return;
+    ANN.push({id:uid(),record_id:cur,seg:pending.seg,start:pending.start,end:pending.end,quote:pending.quote,note,by:"human",created:new Date().toISOString()});
+    cancelPending();saveAnn();renderRecord();}
+});
+document.addEventListener("mousedown",e=>{if(pending&&!e.target.closest("#pop"))cancelPending()});
+function cancelPending(){if(!pending)return;pending.spans.forEach(unwrap);pending=null;$("#pop").style.display="none"}
+
+/* ---------------- map ---------------- */
+const PAL=["#4c78a8","#e45756","#54a24b","#b279a2","#72b7b2","#9d755d","#eeca3b","#ff9da6","#bab0ac","#5f6b7a"];
+function hull(pts){if(pts.length<3)return pts;pts=[...pts].sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[],up=[];for(const p of pts){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+  for(const p of pts.slice().reverse()){while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}return lo.slice(0,-1).concat(up.slice(0,-1))}
+function map(){
+  const N=GRAPH.nodes,W=1000,H=600,P=50;if(!N.length){$("#svg").innerHTML="";return}
+  const xs=N.map(n=>n.x),ys=N.map(n=>n.y),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const sx=x=>P+(x-x0)/((x1-x0)||1)*(W-2*P),sy=y=>H-P-(y-y0)/((y1-y0)||1)*(H-2*P);
+  const annBy={};ANN.forEach(a=>annBy[a.record_id]=(annBy[a.record_id]||0)+1);
+  const inS=new Set(SAMPLES.ids);let g="";
+  const byC={};N.forEach(n=>(byC[n.cluster]=byC[n.cluster]||[]).push([sx(n.x),sy(n.y)]));
+  for(const c in byC){const hp=hull(byC[c]);const col=PAL[c%PAL.length];
+    if(hp.length>=3)g+=`<polygon points="${hp.map(p=>p.join(",")).join(" ")}" fill="${col}" fill-opacity=".09" stroke="${col}" stroke-opacity=".25" stroke-width="36" stroke-linejoin="round"/>`;
+    else g+=hp.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="20" fill="${col}" fill-opacity=".09"/>`).join("")}
+  N.forEach(n=>{const X=sx(n.x),Y=sy(n.y),s=inS.has(n.id),r=s?9:5.5,col=annBy[n.id]?"var(--ann)":PAL[n.cluster%PAL.length];
+    const st=s?`stroke="#16202e" stroke-width="2.2"`:`stroke="#fff" stroke-width="1"`;
+    const shape=n.failed?`<rect x="${X-r}" y="${Y-r}" width="${2*r}" height="${2*r}" rx="1.5" fill="${col}" ${st}/>`:`<circle cx="${X}" cy="${Y}" r="${r}" fill="${col}" ${st}/>`;
+    g+=`<g class="nd" data-id="${n.id}" style="cursor:${s?"pointer":"default"}">${shape}${s?`<text x="${X+r+4}" y="${Y+4}" font-size="11" fill="#3a4656">${n.id.replace("AL-","")}</text>`:""}</g>`});
+  $("#svg").innerHTML=g;
+  const tip=$("#tip"),box=$("#map .wrapm");
+  $$("#svg .nd").forEach(el=>{const n=N.find(x=>x.id===el.dataset.id);
+    el.onmousemove=e=>{const b=box.getBoundingClientRect();tip.style.display="block";tip.style.left=(e.clientX-b.left+14)+"px";tip.style.top=(e.clientY-b.top+10)+"px";
+      tip.innerHTML=`<b>${n.id}</b> · ${esc(n.category)}<br>${esc(n.title)}<br><span style="opacity:.8">cluster ${n.cluster+1} · ${n.fails.length?"failed: "+n.fails.join(", "):"all scored criteria passed"} · ${annBy[n.id]||0} notes${inS.has(n.id)?"":" · not in sample"}</span>`};
+    el.onmouseleave=()=>tip.style.display="none";
+    el.onclick=()=>{if(inS.has(n.id)){show("review");open(n.id)}}});
+  const cl=[...new Set(N.map(n=>n.cluster))].sort((a,b)=>a-b);
+  $("#legend").innerHTML=cl.map(c=>`<span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="${PAL[c%PAL.length]}"/></svg> cluster ${c+1}</span>`).join("")+
+   `<span>● all criteria passed</span><span>■ failed ≥1 criterion</span><span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#ccc" stroke="#16202e" stroke-width="2"/></svg> in sample (click to open)</span><span><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#f28c28"/></svg> has notes</span>`;
+}
+
+/* ---------------- progress ---------------- */
+function squarify(items,x,y,w,h){ // items: [{v,...}] sorted desc; returns rects
+  const out=[];let rest=items.slice();const total=rest.reduce((s,i)=>s+i.v,0);if(!total)return out;
+  const scale=(w*h)/total;rest=rest.map(i=>({...i,a:i.v*scale}));
+  const worst=(row,len)=>{const s=row.reduce((t,r)=>t+r.a,0),mx=Math.max(...row.map(r=>r.a)),mn=Math.min(...row.map(r=>r.a));return Math.max(len*len*mx/(s*s),(s*s)/(len*len*mn))};
+  while(rest.length){const len=Math.min(w,h);let row=[rest[0]],i=1;
+    while(i<rest.length&&worst(row.concat(rest[i]),len)<=worst(row,len)){row.push(rest[i]);i++}
+    rest=rest.slice(i);const s=row.reduce((t,r)=>t+r.a,0);
+    if(w>=h){const cw=s/h;let cy=y;row.forEach(r=>{const rh=r.a/cw;out.push({...r,x,y:cy,w:cw,h:rh});cy+=rh});x+=cw;w-=cw}
+    else{const rh=s/w;let cx=x;row.forEach(r=>{const cw=r.a/rh;out.push({...r,x:cx,y,w:cw,h:rh});cx+=cw});y+=rh;h-=rh}}
+  return out}
+function progress(){
+  const byId={};ANN.forEach(a=>byId[a.id]=a);
+  const assigned=new Set();const modes=(PAT.modes||[]).map(m=>{const notes=(m.annotation_ids||[]).map(i=>byId[i]).filter(Boolean);notes.forEach(n=>assigned.add(n.id));return{...m,notes,v:Math.max(notes.length,0)}}).filter(m=>m.v>0).sort((a,b)=>b.v-a.v);
+  const un=ANN.filter(a=>!assigned.has(a.id));
+  if(un.length)modes.push({name:"Not yet categorized",description:"Notes the agent has not grouped yet",notes:un,v:un.length,un:true});
+  $("#tmsub").textContent=ANN.length?`${ANN.length} notes · ${(PAT.modes||[]).length} failure modes${PAT.updated?" · updated "+PAT.updated:""}`:"No notes yet. Select text in a trace and type what's wrong.";
+  const tree=$("#tree");tree.innerHTML="";
+  if(!modes.length){tree.innerHTML='<div class="empty">Failure modes appear here as you annotate. The agent groups your notes into named modes.</div>';}
+  else{const W=tree.clientWidth||1000,H=tree.clientHeight||440;
+    squarify(modes,0,0,W,H).forEach((m,i)=>{const d=document.createElement("div");d.className="tm";
+      Object.assign(d.style,{left:m.x+"px",top:m.y+"px",width:m.w+"px",height:m.h+"px",background:m.un?"#8a94a3":PAL[i%PAL.length]});
+      d.innerHTML=`<h4>${esc(m.name)}</h4><div class="n">${m.v} note${m.v>1?"s":""}</div>${m.description?`<div class="d">${esc(m.description)}</div>`:""}<ul>${m.notes.map(n=>`<li data-aid="${n.id}"><b>${n.record_id}</b> ${esc(n.note)}</li>`).join("")}</ul>`;
+      tree.appendChild(d)});
+    $$("#tree li").forEach(li=>li.onclick=()=>goto(li.dataset.aid))}
+  // suggestions
+  const pend=SUG.filter(s=>s.status==="pending");
+  let h=`<h2>Agent suggestions to review</h2><div class="sub">${pend.length?"Spans the agent thinks show a known failure mode. Accepting turns them into notes.":"No pending suggestions."}</div>`;
+  if(pend.length){h+=`<div class="sbar"><label><input type="checkbox" id="sall" checked> Select all</label><button class="yes" id="sacc">Accept selected</button><button id="sdis">Dismiss selected</button></div>
+    <table class="st"><tr><th></th><th>Failure mode</th><th>Quoted text</th><th>Record</th><th>Why</th></tr>`+
+    pend.map(s=>`<tr><td><input type="checkbox" class="sck" value="${s.id}" checked></td><td>${esc(s.mode||"")}</td><td class="q" data-sid="${s.id}">“${esc(s.quote)}”</td><td>${s.record_id}</td><td>${esc(s.note||"")}</td></tr>`).join("")+"</table>"}
+  $("#sugs").innerHTML=h;
+  if(pend.length){$("#sall").onchange=e=>$$(".sck").forEach(c=>c.checked=e.target.checked);
+    const sel=()=>$$(".sck").filter(c=>c.checked).map(c=>c.value);
+    $("#sacc").onclick=()=>{const s=sel();if(s.length)decide(s,"accepted")};$("#sdis").onclick=()=>{const s=sel();if(s.length)decide(s,"dismissed")};
+    $$("#sugs .q").forEach(q=>q.onclick=()=>goto(q.dataset.sid,true))}
+}
+function goto(id,isSug){
+  const a=isSug?SUG.find(s=>s.id===id):ANN.find(x=>x.id===id);if(!a)return;
+  if(!SAMPLES.ids.includes(a.record_id)){toast(a.record_id+" is not in the sample");return}
+  show("review");open(a.record_id);
+  requestAnimationFrame(()=>{const sp=$(`[data-mid="${id}"]`);if(sp){sp.scrollIntoView({block:"center",behavior:"smooth"});$$(`[data-mid="${id}"]`).forEach(e=>{e.classList.remove("flash");void e.offsetWidth;e.classList.add("flash")})}});
+}
+window.addEventListener("resize",()=>{if(view==="progress")progress();});
+boot();
+</script>
+</body>
+</html>
